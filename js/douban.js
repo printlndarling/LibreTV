@@ -529,21 +529,19 @@ async function renderDoubanCards(data, container) {
                 .replace(/>/g, '&gt;');
 
             // 处理图片URL
-            // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
+            // 豆瓣图片有反爬虫机制，直接使用代理URL
             const originalCoverUrl = item.cover;
-
-            // 2. 生成带鉴权的代理URL作为备选
             const proxiedCoverUrl = window.ProxyAuth?.addAuthToProxyUrl
                 ? await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(originalCoverUrl))
                 : PROXY_URL + encodeURIComponent(originalCoverUrl);
-            
+
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
+                    <img src="${proxiedCoverUrl}" alt="${safeTitle}"
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
-                        loading="lazy" referrerpolicy="no-referrer">
+                        onerror="this.onerror=null; this.src='https://via.placeholder.com/300x450?text=加载失败';"
+                        loading="lazy">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
                         <span class="text-yellow-400">★</span> ${safeRate}
