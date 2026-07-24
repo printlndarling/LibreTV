@@ -1,0 +1,3 @@
+# Cloudflare Pages Redirects
+# 将 /api/scrape/* 映射到 /scrape/* function
+/api/scrape/*  /scrape/:splat  200
