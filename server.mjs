@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { searchYingxiang, searchWeiyun, detailYingxiang, detailWeiyun } from './scrape-sources.mjs';
 
 dotenv.config();
 
@@ -219,6 +220,59 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
     } else {
       res.status(500).send(`请求失败: ${error.message}`);
     }
+  }
+});
+
+// ===== 网页爬虫源 API 路由 =====
+// 映像星球搜索
+app.get('/api/scrape/yingxiang/search', async (req, res) => {
+  try {
+    const query = req.query.wd || '';
+    if (!query) return res.json({ code: -1, msg: '缺少搜索参数', list: [] });
+    const result = await searchYingxiang(query);
+    res.json(result);
+  } catch (error) {
+    console.error('映像星球搜索错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
+  }
+});
+
+// 映像星球详情
+app.get('/api/scrape/yingxiang/detail', async (req, res) => {
+  try {
+    const url = req.query.url || req.query.id || '';
+    if (!url) return res.json({ code: -1, msg: '缺少参数', list: [] });
+    const result = await detailYingxiang(url);
+    res.json(result);
+  } catch (error) {
+    console.error('映像星球详情错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
+  }
+});
+
+// 微云TV搜索
+app.get('/api/scrape/weiyun/search', async (req, res) => {
+  try {
+    const query = req.query.wd || '';
+    if (!query) return res.json({ code: -1, msg: '缺少搜索参数', list: [] });
+    const result = await searchWeiyun(query);
+    res.json(result);
+  } catch (error) {
+    console.error('微云TV搜索错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
+  }
+});
+
+// 微云TV详情
+app.get('/api/scrape/weiyun/detail', async (req, res) => {
+  try {
+    const url = req.query.url || req.query.id || '';
+    if (!url) return res.json({ code: -1, msg: '缺少参数', list: [] });
+    const result = await detailWeiyun(url);
+    res.json(result);
+  } catch (error) {
+    console.error('微云TV详情错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
   }
 });
 

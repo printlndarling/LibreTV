@@ -95,6 +95,38 @@ async function handleApiRequest(url) {
                 throw new Error('无效的API来源');
             }
 
+            // 处理爬虫源（映像星球、微云TV等）
+            if (sourceCode !== 'custom' && API_SITES[sourceCode] && API_SITES[sourceCode].isScrapeSource) {
+                // scrape源的vod_id实际上存储的是vod_url，直接在id字段中
+                const detailResp = await fetch(`/api/scrape/${sourceCode}/detail?url=${encodeURIComponent(id)}`);
+                const detailData = await detailResp.json();
+                if (detailData && detailData.list && detailData.list.length > 0) {
+                    const video = detailData.list[0];
+                    let episodes = [];
+                    if (video.vod_play_url) {
+                        const playSources = video.vod_play_url.split('$$$');
+                        if (playSources.length > 0) {
+                            episodes = playSources.map(ep => {
+                                const parts = ep.split('$');
+                                return parts.length > 1 ? {name: parts[0], url: parts[1]} : {name: '默认', url: parts[0]};
+                            });
+                        }
+                    }
+                    return JSON.stringify({
+                        code: 200,
+                        episodes: episodes.map(e => e.url),
+                        episodeNames: episodes.map(e => e.name),
+                        videoInfo: {
+                            title: video.vod_name || '',
+                            desc: '',
+                            source_name: API_SITES[sourceCode].name,
+                            source_code: sourceCode
+                        }
+                    });
+                }
+                throw new Error('获取详情失败');
+            }
+
             // 对于有detail参数的源，都使用特殊处理方式
             if (sourceCode !== 'custom' && API_SITES[sourceCode].detail) {
                 return await handleSpecialSourceDetail(id, sourceCode);

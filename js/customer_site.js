@@ -1,8 +1,7 @@
+// 用户自定义站点（可在此添加个人源）
 const CUSTOMER_SITES = {
-    qiqi: {
-        api: 'https://www.qiqidys.com/api.php/provide/vod',
-        name: '七七资源',
-    }
+    // 在此添加自定义API源，稍后通过extendAPISites合并到主配置
+    // 格式: { key: { api: 'URL', name: '显示名' } }
 };
 
 // 调用全局方法合并

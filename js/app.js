@@ -742,13 +742,15 @@ async function search() {
             // 添加API URL属性，用于详情获取
             const apiUrlAttr = item.api_url ?
                 `data-api-url="${item.api_url.replace(/"/g, '&quot;')}"` : '';
+            const vodUrlAttr = item.vod_url ?
+                `data-vod-url="${item.vod_url.replace(/"/g, '&quot;')}"` : '';
 
             // 修改为水平卡片布局，图片在左侧，文本在右侧，并优化样式
             const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
 
             return `
-                <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
-                     onclick="showDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
+                <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md"
+                     onclick="showDetails('${safeId}','${safeName}','${sourceCode}', event)" ${apiUrlAttr} ${vodUrlAttr}>
                     <div class="flex h-full">
                         ${hasCover ? `
                         <div class="relative flex-shrink-0 search-card-img-container">
@@ -854,8 +856,8 @@ function hookInput() {
 }
 document.addEventListener('DOMContentLoaded', hookInput);
 
-// 显示详情 - 修改为支持自定义API
-async function showDetails(id, vod_name, sourceCode) {
+// 显示详情 - 修改为支持自定义API和爬虫源
+async function showDetails(id, vod_name, sourceCode, event) {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
@@ -863,6 +865,16 @@ async function showDetails(id, vod_name, sourceCode) {
             return;
         }
     }
+
+    // 对爬虫源，从data属性获取真实的vod_url作为ID
+    if (API_SITES[sourceCode] && API_SITES[sourceCode].isScrapeSource) {
+        // 通过event获取点击元素
+        const el = event?.currentTarget || event?.target?.closest('[data-vod-url]');
+        if (el && el.dataset.vodUrl) {
+            id = el.dataset.vodUrl;
+        }
+    }
+
     if (!id) {
         showToast('视频ID无效', 'error');
         return;

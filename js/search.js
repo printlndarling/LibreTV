@@ -22,16 +22,30 @@ async function searchByAPIAndKeyWord(apiId, query) {
         // 添加超时处理
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        // 添加鉴权参数到代理URL
-        const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ? 
-            await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(apiUrl)) :
-            PROXY_URL + encodeURIComponent(apiUrl);
-        
-        const response = await fetch(proxiedUrl, {
-            headers: API_CONFIG.search.headers,
-            signal: controller.signal
-        });
+
+        let response;
+        // 爬虫源（本地API）直接请求，不通过代理
+        if (apiUrl.startsWith('/api/scrape/')) {
+            // 对于爬虫源，URL已经是`/api/scrape/源/search?ac=...&wd=查询词`格式
+            // 需要改为 `?wd=查询词` 格式（去掉ac参数）
+            const urlObj = new URL(apiUrl, window.location.origin);
+            const wd = urlObj.searchParams.get('wd') || '';
+            const cleanUrl = urlObj.pathname + '?wd=' + encodeURIComponent(wd);
+            response = await fetch(cleanUrl, {
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
+        } else {
+            // 添加鉴权参数到代理URL
+            const proxiedUrl = await window.ProxyAuth?.addAuthToProxyUrl ?
+                await window.ProxyAuth.addAuthToProxyUrl(PROXY_URL + encodeURIComponent(apiUrl)) :
+                PROXY_URL + encodeURIComponent(apiUrl);
+
+            response = await fetch(proxiedUrl, {
+                headers: API_CONFIG.search.headers,
+                signal: controller.signal
+            });
+        }
         
         clearTimeout(timeoutId);
         
