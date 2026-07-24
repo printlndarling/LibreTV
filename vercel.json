@@ -5,6 +5,10 @@
       "destination": "/api/proxy/:path*"
     },
     {
+      "source": "/api/scrape/:path*",
+      "destination": "/api/scrape/:path*"
+    },
+    {
       "source": "/s=:query",
       "destination": "/index.html"
     },
