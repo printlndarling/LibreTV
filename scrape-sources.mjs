@@ -300,4 +300,121 @@ async function detailWeiyun(vodUrl) {
   };
 }
 
-export { searchYingxiang, searchWeiyun, detailYingxiang, detailWeiyun };
+/**
+ * 黄果短剧 (huangguoai.com) 网页爬虫源
+ * 搜索: /search/video/{kw}/ ; 详情: /detail/{id}/ ; 播放页: videoInitialData JSON 内嵌 m3u8
+ */
+const HUANGGUO = {
+  name: '黃果短劇',
+  site: 'https://huangguoai.com',
+  ua: USER_AGENT
+};
+
+// 黄果短剧要求完整请求头(Referer+Accept-Language)，否则 400
+const HG_HEADERS = {
+  'User-Agent': USER_AGENT,
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'zh-CN,zh;q=0.9',
+  'Referer': `${HUANGGUO.site}/`
+};
+
+async function searchHuangguo(query) {
+  const url = `${HUANGGUO.site}/search/video/${encodeURIComponent(query)}/`;
+  const resp = await axios.get(url, { headers: HG_HEADERS, timeout: 10000 });
+  const html = resp.data;
+  const $ = cheerio.load(html);
+  const results = [];
+  const seen = new Set();
+
+  $('.hg-card-grid .hg-drama-card').each((i, el) => {
+    if (i >= 20) return false;
+    const link = $(el).find('a[href*="/detail/"]').first();
+    const href = link.attr('href') || '';
+    const m = href.match(/\/detail\/(\d+)\//);
+    if (!m || seen.has(m[1])) return;
+    seen.add(m[1]);
+    const title = $(el).find('.hg-drama-card__title').first().text().trim();
+    if (!title) return;
+    const pic = $(el).find('img').attr('data-src') || $(el).find('img').attr('src') || '';
+    const ep = $(el).find('.hg-drama-card__episode').first().text().trim();
+    const score = $(el).find('.hg-drama-card__score').first().text().trim();
+    const fullUrl = href.startsWith('http') ? href : `${HUANGGUO.site}${href}`;
+    let remarks = '';
+    if (ep && score) remarks = `${ep} · ${score}`;
+    else remarks = ep || score || '在线观看';
+    results.push({
+      vod_id: fullUrl,
+      vod_name: title,
+      vod_pic: pic.split('?')[0],
+      vod_remarks: remarks,
+      source_name: HUANGGUO.name,
+      source_code: 'huangguo',
+      vod_url: fullUrl
+    });
+  });
+
+  return {
+    code: 1, msg: '数据列表', page: 1, pagecount: 1, limit: '20',
+    total: results.length, list: results
+  };
+}
+
+/** 从黄果播放页 videoInitialData 提取 m3u8 */
+async function huangguoPlay(playUrl) {
+  try {
+    const resp = await axios.get(playUrl, {
+      headers: HG_HEADERS, timeout: 10000
+    });
+    const html = resp.data;
+    const m = html.match(/id="videoInitialData"[^>]*>([\s\S]*?)<\/script>/);
+    if (!m) return '';
+    const data = JSON.parse(m[1].trim());
+    const srcs = (data && data.epPlaySrcs) || {};
+    let play = (data && data.videoSrc) || '';
+    for (const k of Object.keys(srcs)) { if (srcs[k]) { play = srcs[k]; break; } }
+    if (!play) return '';
+    play = play.replace(/\\u0026/g, '&');
+    if (!play.startsWith('http')) {
+      const mm = play.match(/(https?:\/\/[^\s"']+)/);
+      play = mm ? mm[1] : '';
+    }
+    return play;
+  } catch (e) { return ''; }
+}
+
+async function detailHuangguo(vodUrl) {
+  const url = vodUrl.startsWith('http') ? vodUrl : `${HUANGGUO.site}${vodUrl}`;
+  const resp = await axios.get(url, { headers: HG_HEADERS, timeout: 10000 });
+  const $ = cheerio.load(resp.data);
+  const eps = [];
+  $('.hg-web-detail__ep-grid a').each((i, el) => {
+    const href = $(el).attr('href') || '';
+    if (!href) return;
+    const eid = $(el).attr('data-ep-id') || '';
+    const name = eid ? `第${eid}集` : ($(el).text().trim() || `第${i + 1}集`);
+    eps.push({ name, url: href.startsWith('http') ? href : `${HUANGGUO.site}${href}` });
+  });
+  if (!eps.length) {
+    const playHref = $('a.hg-web-detail__play').first().attr('href');
+    if (playHref) eps.push({ name: '第1集', url: playHref.startsWith('http') ? playHref : `${HUANGGUO.site}${playHref}` });
+  }
+
+  const plays = [];
+  for (const e of eps.slice(0, 25)) {
+    const m3u8 = await huangguoPlay(e.url);
+    plays.push({ name: e.name, url: m3u8 || e.url });
+  }
+  if (!plays.length) plays.push({ name: '在线观看', url: url });
+
+  const title = $('title').text().replace(/[\s-]*黄果[\s-]*/, '').trim() || '黃果短劇';
+  return {
+    code: 1, msg: '详情数据',
+    list: [{
+      vod_id: 1, vod_name: title,
+      vod_play_from: HUANGGUO.name,
+      vod_play_url: plays.map(p => `${p.name}$${p.url}`).join('$$$')
+    }]
+  };
+}
+
+export { searchYingxiang, searchWeiyun, detailYingxiang, detailWeiyun, searchHuangguo, detailHuangguo };

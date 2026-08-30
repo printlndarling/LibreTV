@@ -104,6 +104,13 @@ const API_SITES = {
         name: 'AV-乐播资源',
         detail: 'https://lbapi9.com',
         adult: true
+    },
+    huangguo: {
+        api: '/api/scrape/huangguo/search',
+        name: '黃果短劇',
+        detail: 'https://huangguoai.com',
+        isScrapeSource: true,
+        adult: true
     }
     //ARCHIVE https://telegra.ph/APIs-08-12
 };
