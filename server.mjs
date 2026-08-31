@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { searchYingxiang, searchWeiyun, detailYingxiang, detailWeiyun } from './scrape-sources.mjs';
+import { searchYingxiang, searchWeiyun, detailYingxiang, detailWeiyun, searchHuangguo, detailHuangguo } from './scrape-sources.mjs';
 
 dotenv.config();
 
@@ -272,6 +272,32 @@ app.get('/api/scrape/weiyun/detail', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('微云TV详情错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
+  }
+});
+
+// 黄果短剧搜索
+app.get('/api/scrape/huangguo/search', async (req, res) => {
+  try {
+    const query = req.query.wd || '';
+    if (!query) return res.json({ code: -1, msg: '缺少搜索参数', list: [] });
+    const result = await searchHuangguo(query);
+    res.json(result);
+  } catch (error) {
+    console.error('黄果短剧搜索错误:', error.message);
+    res.json({ code: -1, msg: error.message, list: [] });
+  }
+});
+
+// 黄果短剧详情
+app.get('/api/scrape/huangguo/detail', async (req, res) => {
+  try {
+    const url = req.query.url || req.query.id || '';
+    if (!url) return res.json({ code: -1, msg: '缺少参数', list: [] });
+    const result = await detailHuangguo(url);
+    res.json(result);
+  } catch (error) {
+    console.error('黄果短剧详情错误:', error.message);
     res.json({ code: -1, msg: error.message, list: [] });
   }
 });
